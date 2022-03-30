@@ -13,11 +13,16 @@ struct D3D11CubeTest
     ID3D11Texture2D*         depth_buffer;
     ID3D11DepthStencilView*  depth_buffer_view;
     ID3D11RasterizerState*   rasterizer_state;
+    ID3D11RasterizerState*   wireframe_rasterizer_state;
     ID3D11DepthStencilState* depth_stencil_state;
     
     ID3D11VertexShader*       vertex_shader;
     ID3D11PixelShader*        pixel_shader;
     ID3D11InputLayout*        input_layout;
+    ID3D11Texture2D*          color_texture;
+    ID3D11ShaderResourceView* color_texture_view;
+    ID3D11Texture2D*          normal_texture;
+    ID3D11ShaderResourceView* normal_texture_view;
     ID3D11VertexShader*       skybox_vertex_shader;
     ID3D11PixelShader*        skybox_pixel_shader;
     ID3D11SamplerState*       skybox_sampler_state;
@@ -37,12 +42,20 @@ struct D3D11CubeTest
     float yaw;
     float pitch;
     V3f   camera_pos;
+
+    bool up_is_down;
+    bool down_is_down;
+    bool left_is_down;
+    bool right_is_down;
+
+    bool fps_cam_on;
+
+    V3f light_pos;
 };
 
 struct SphereVertex
 {
     V3f pos;
-    V3f normal;
     V2f uv;
 };
 

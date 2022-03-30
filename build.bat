@@ -12,12 +12,17 @@ mkdir build
 pushd build
 cl /DCUBE_TEST_DEBUG^
    /DGJ_DEBUG^
+   /DUSE_IMGUI^
    /DVS_BYTES=%vs_bytes%^
    /DPS_BYTES=%ps_bytes%^
    /DVSSkybox_BYTES=%skybox_vs_bytes%^
    /DPSSkybox_BYTES=%skybox_ps_bytes%^
-   /I..\..\gj^
+   /I..\gj^
+   /I..\gj\libs\imgui^
    /Z7 /FC /nologo^
    ..\code\cube_test_main.cpp^
+   ..\gj\libs\imgui\*.cpp^
+   ..\gj\libs\imgui\backends\imgui_impl_dx11.cpp^
+   ..\gj\libs\imgui\backends\imgui_impl_win32.cpp^
    user32.lib d3d11.lib
 popd

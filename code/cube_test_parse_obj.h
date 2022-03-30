@@ -93,13 +93,13 @@ ctpo_parse(const char* obj_filename,
         else if (ctpo_check(&parse_state, "f"))
         {
             parse_state.bytes_read += 1;
-            for (u32 i = 0; i < 4; i++)
+            for (u32 i = 0; i < 3; i++)
             {
-                *position_indices++ = ctpo_parse_s32(&parse_state);
+                *position_indices++ = ctpo_parse_s32(&parse_state) - 1;
                 parse_state.bytes_read++;
-                *uv_indices++       = ctpo_parse_s32(&parse_state);
+                *uv_indices++       = ctpo_parse_s32(&parse_state) - 1;
                 parse_state.bytes_read++;
-                *normal_indices++   = ctpo_parse_s32(&parse_state);
+                *normal_indices++   = ctpo_parse_s32(&parse_state) - 1;
                 *index_count += 1;
             }
             ctpo_skip_line(&parse_state);
