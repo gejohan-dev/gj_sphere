@@ -19,13 +19,13 @@ struct D3D11CubeTest
     ID3D11VertexShader*       vertex_shader;
     ID3D11PixelShader*        pixel_shader;
     ID3D11InputLayout*        input_layout;
+    ID3D11SamplerState*       sampler_state;
     ID3D11Texture2D*          color_texture;
     ID3D11ShaderResourceView* color_texture_view;
     ID3D11Texture2D*          normal_texture;
     ID3D11ShaderResourceView* normal_texture_view;
     ID3D11VertexShader*       skybox_vertex_shader;
     ID3D11PixelShader*        skybox_pixel_shader;
-    ID3D11SamplerState*       skybox_sampler_state;
     ID3D11Texture2D*          skybox_texture;
     ID3D11ShaderResourceView* skybox_texture_view;
     ID3D11InputLayout*        skybox_input_layout;
@@ -47,15 +47,20 @@ struct D3D11CubeTest
     bool down_is_down;
     bool left_is_down;
     bool right_is_down;
+    bool space_is_down;
+    bool ctrl_is_down;
 
     bool fps_cam_on;
-
+    bool wireframe_mode_on;
+    bool normal_use_texture;
+    
     V3f light_pos;
 };
 
-struct SphereVertex
+struct MeshVertex
 {
     V3f pos;
+    V3f normal;
     V2f uv;
 };
 
