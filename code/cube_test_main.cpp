@@ -21,6 +21,8 @@ extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg
 
 #include "vs.h"
 #include "ps.h"
+#include "shadow_map_vs.h"
+#include "shadow_map_ps.h"
 #include "skybox_vs.h"
 #include "skybox_ps.h"
 
@@ -46,33 +48,64 @@ d3d11_resize(HWND wnd, D3D11CubeTest* d3d11_cube_test, uint32_t width, uint32_t 
 {
     HRESULT hr;
 
-    if (d3d11_cube_test->render_target_view) d3d11_cube_test->render_target_view->Release();
-    if (d3d11_cube_test->depth_buffer) d3d11_cube_test->depth_buffer->Release();
-    if (d3d11_cube_test->depth_buffer_view) d3d11_cube_test->depth_buffer_view->Release();
+    // Backbuffer color/depth/stencil
+    {
+        if (d3d11_cube_test->render_target_view) d3d11_cube_test->render_target_view->Release();
+        if (d3d11_cube_test->depth_buffer) d3d11_cube_test->depth_buffer->Release();
+        if (d3d11_cube_test->depth_buffer_view) d3d11_cube_test->depth_buffer_view->Release();
     
-    d3d11_cube_test->swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
-    ID3D11Texture2D* backbuffer;
-    hr = d3d11_cube_test->swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbuffer);
-    if (FAILED(hr)) { show_error_and_exit("Failed to get backbuffer!"); }
-    hr = d3d11_cube_test->device->CreateRenderTargetView(backbuffer, NULL, &d3d11_cube_test->render_target_view);
-    if (FAILED(hr)) { show_error_and_exit("Failed to create render target view!"); }
-    D3D11_TEXTURE2D_DESC depth_buffer_desc; gj_ZeroStruct(&depth_buffer_desc);
-    depth_buffer_desc.Width      = width;
-    depth_buffer_desc.Height     = height;
-    depth_buffer_desc.MipLevels  = 1;
-    depth_buffer_desc.ArraySize  = 1;
-    depth_buffer_desc.Format     = DXGI_FORMAT_D24_UNORM_S8_UINT;
-    depth_buffer_desc.SampleDesc = {1, 0};
-    depth_buffer_desc.Usage      = D3D11_USAGE_DEFAULT;
-    depth_buffer_desc.BindFlags  = D3D11_BIND_DEPTH_STENCIL;
-    d3d11_cube_test->device->CreateTexture2D(&depth_buffer_desc, NULL, &d3d11_cube_test->depth_buffer);
-    d3d11_cube_test->device->CreateDepthStencilView(d3d11_cube_test->depth_buffer, NULL, &d3d11_cube_test->depth_buffer_view);
-    backbuffer->Release();
+        d3d11_cube_test->swap_chain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
+        ID3D11Texture2D* backbuffer;
+        hr = d3d11_cube_test->swap_chain->GetBuffer(0, __uuidof(ID3D11Texture2D), (void**)&backbuffer);
+        if (FAILED(hr)) { show_error_and_exit("Failed to get backbuffer!"); }
+        hr = d3d11_cube_test->device->CreateRenderTargetView(backbuffer, NULL, &d3d11_cube_test->render_target_view);
+        if (FAILED(hr)) { show_error_and_exit("Failed to create render target view!"); }
+        D3D11_TEXTURE2D_DESC depth_buffer_desc; gj_ZeroStruct(&depth_buffer_desc);
+        depth_buffer_desc.Width      = width;
+        depth_buffer_desc.Height     = height;
+        depth_buffer_desc.MipLevels  = 1;
+        depth_buffer_desc.ArraySize  = 1;
+        depth_buffer_desc.Format     = DXGI_FORMAT_D24_UNORM_S8_UINT;
+        depth_buffer_desc.SampleDesc = {1, 0};
+        depth_buffer_desc.Usage      = D3D11_USAGE_DEFAULT;
+        depth_buffer_desc.BindFlags  = D3D11_BIND_DEPTH_STENCIL;
+        d3d11_cube_test->device->CreateTexture2D(&depth_buffer_desc, NULL, &d3d11_cube_test->depth_buffer);
+        d3d11_cube_test->device->CreateDepthStencilView(d3d11_cube_test->depth_buffer, NULL, &d3d11_cube_test->depth_buffer_view);
+        backbuffer->Release();
+    }
+
+    // Shadow map
+    {
+        D3D11_TEXTURE2D_DESC shadow_map_buffer_desc; gj_ZeroStruct(&shadow_map_buffer_desc);
+        shadow_map_buffer_desc.Width      = width;
+        shadow_map_buffer_desc.Height     = height;
+        shadow_map_buffer_desc.MipLevels  = 1;
+        shadow_map_buffer_desc.ArraySize  = 1;
+        shadow_map_buffer_desc.Format     = DXGI_FORMAT_R32_TYPELESS;
+        shadow_map_buffer_desc.SampleDesc = {1, 0};
+        shadow_map_buffer_desc.Usage      = D3D11_USAGE_DEFAULT;
+        shadow_map_buffer_desc.BindFlags  = D3D11_BIND_DEPTH_STENCIL | D3D11_BIND_SHADER_RESOURCE;
+        d3d11_cube_test->device->CreateTexture2D(&shadow_map_buffer_desc, NULL, &d3d11_cube_test->shadow_map_render_target);
+
+        D3D11_DEPTH_STENCIL_VIEW_DESC shadow_map_view_desc; gj_ZeroStruct(&shadow_map_view_desc);
+        shadow_map_view_desc.Format        = DXGI_FORMAT_D32_FLOAT;
+        shadow_map_view_desc.ViewDimension = D3D11_DSV_DIMENSION_TEXTURE2D;
+        d3d11_cube_test->device->CreateDepthStencilView(d3d11_cube_test->shadow_map_render_target, &shadow_map_view_desc, &d3d11_cube_test->shadow_map_render_target_view);
+
+        D3D11_SHADER_RESOURCE_VIEW_DESC shadow_map_texture_view_desc;
+        shadow_map_texture_view_desc.Format                      = DXGI_FORMAT_R32_FLOAT;
+        shadow_map_texture_view_desc.ViewDimension               = D3D11_SRV_DIMENSION_TEXTURE2D;
+        shadow_map_texture_view_desc.TextureCube.MipLevels       = shadow_map_buffer_desc.MipLevels;
+        shadow_map_texture_view_desc.TextureCube.MostDetailedMip = 0;
+        d3d11_cube_test->device->CreateShaderResourceView(d3d11_cube_test->shadow_map_render_target, &shadow_map_texture_view_desc, &d3d11_cube_test->shadow_map_texture_view);
+    }
     
     d3d11_cube_test->width = width;
     d3d11_cube_test->height = height;
     
-    d3d11_cube_test->projection_matrix = M4x4_projection_matrix(70.0f, (float)width/(float)height, 0.01f, 100.0f);
+    d3d11_cube_test->world_projection_matrix = M4x4_projection_matrix(70.0f, (float)width/(float)height, 0.01f, 100.0f);
+    d3d11_cube_test->light_projection_matrix = M4x4_projection_matrix(70.0f, (float)width/(float)height, 0.01f, 100.0f);
+    // d3d11_cube_test->light_projection_matrix = M4x4_orthographic_matrix((float)width, (float)height, 0.01f, 100.0f);
 }
 
 static ID3D11Buffer*
@@ -267,7 +300,7 @@ d3d11_init(HWND wnd, D3D11CubeTest* d3d11_cube_test)
         depth_stencil_desc.DepthFunc      = D3D11_COMPARISON_LESS_EQUAL;
         d3d11_cube_test->device->CreateDepthStencilState(&depth_stencil_desc, &d3d11_cube_test->depth_stencil_state);
     }
-
+    
     // Vertex/Pixel shader for meshes
     {
         hr = d3d11_cube_test->device->CreateVertexShader(VS_BYTES, sizeof(VS_BYTES), NULL, &d3d11_cube_test->vertex_shader);
@@ -304,6 +337,12 @@ d3d11_init(HWND wnd, D3D11CubeTest* d3d11_cube_test)
                     &d3d11_cube_test->plane_mesh.vertex_buffer, &d3d11_cube_test->plane_mesh.vertex_count,
                     &d3d11_cube_test->plane_mesh.color_texture, &d3d11_cube_test->plane_mesh.color_texture_view,
                     &d3d11_cube_test->plane_mesh.normal_texture, &d3d11_cube_test->plane_mesh.normal_texture_view);
+
+    // Shadow Map Shader
+    {
+        d3d11_cube_test->device->CreateVertexShader(VSShadowMap_BYTES, sizeof(VSShadowMap_BYTES), NULL, &d3d11_cube_test->shadow_map_vertex_shader);
+        d3d11_cube_test->device->CreatePixelShader(PSShadowMap_BYTES, sizeof(PSShadowMap_BYTES), NULL, &d3d11_cube_test->shadow_map_pixel_shader);
+    }
     
     // Skybox
     {
@@ -418,7 +457,7 @@ static void
 d3d11_render_mesh(D3D11CubeTest* d3d11_cube_test,
                   const M4x4& mesh_transform,
                   ID3D11Buffer* vertex_buffer, size_t vertex_count,
-                  ID3D11ShaderResourceView* color_texture_view, ID3D11ShaderResourceView* normal_texture_view)
+                  ID3D11ShaderResourceView* color_texture_view, ID3D11ShaderResourceView* normal_texture_view, ID3D11ShaderResourceView* shadow_map_texture_view)
 {
     D3D11_MAPPED_SUBRESOURCE constant_buffer_data; gj_ZeroStruct(&constant_buffer_data);
     d3d11_cube_test->device_context->Map(d3d11_cube_test->constant_buffer, 0, D3D11_MAP_WRITE_DISCARD, 0, &constant_buffer_data);
@@ -429,30 +468,29 @@ d3d11_render_mesh(D3D11CubeTest* d3d11_cube_test,
     memcpy((byte*)constant_buffer_data.pData + sizeof(M4x4) * 3 + sizeof(V4f),     d3d11_cube_test->camera_pos.a,        sizeof(V3f));
     memcpy((byte*)constant_buffer_data.pData + sizeof(M4x4) * 3 + sizeof(V4f) * 2, &d3d11_cube_test->normal_use_texture, sizeof(bool));
     d3d11_cube_test->device_context->Unmap(d3d11_cube_test->constant_buffer, 0);
-    
-    {
-        ID3D11Buffer* vertex_buffers[] = {vertex_buffer};
-        UINT strides[] = {sizeof(MeshVertex)};
-        UINT offsets[] = {0};
+
+    d3d11_cube_test->device_context->VSSetConstantBuffers(0, 1, &d3d11_cube_test->constant_buffer);
+    d3d11_cube_test->device_context->PSSetConstantBuffers(0, 1, &d3d11_cube_test->constant_buffer);
+    d3d11_cube_test->device_context->PSSetSamplers(0, 1, &d3d11_cube_test->sampler_state);
+    ID3D11ShaderResourceView* shader_resources[] = {color_texture_view, normal_texture_view, shadow_map_texture_view};
+    d3d11_cube_test->device_context->PSSetShaderResources(0, gj_ArrayCount(shader_resources), shader_resources);
+
+    ID3D11Buffer* vertex_buffers[] = {vertex_buffer};
+    UINT strides[] = {sizeof(MeshVertex)};
+    UINT offsets[] = {0};
         
-        d3d11_cube_test->device_context->IASetVertexBuffers(0, 1, vertex_buffers, strides, offsets);
-        d3d11_cube_test->device_context->IASetInputLayout(d3d11_cube_test->input_layout);
-        d3d11_cube_test->device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+    d3d11_cube_test->device_context->IASetVertexBuffers(0, 1, vertex_buffers, strides, offsets);
+    d3d11_cube_test->device_context->IASetInputLayout(d3d11_cube_test->input_layout);
+    d3d11_cube_test->device_context->IASetPrimitiveTopology(D3D11_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
 
-        d3d11_cube_test->device_context->VSSetShader(d3d11_cube_test->vertex_shader, NULL, 0);
-        d3d11_cube_test->device_context->PSSetShader(d3d11_cube_test->pixel_shader, NULL, 0);
-        d3d11_cube_test->device_context->VSSetConstantBuffers(0, 1, &d3d11_cube_test->constant_buffer);
-        d3d11_cube_test->device_context->PSSetConstantBuffers(0, 1, &d3d11_cube_test->constant_buffer);
-        d3d11_cube_test->device_context->PSSetSamplers(0, 1, &d3d11_cube_test->sampler_state);
-        ID3D11ShaderResourceView* shader_resources[] = {color_texture_view, normal_texture_view};
-        d3d11_cube_test->device_context->PSSetShaderResources(0, 2, shader_resources);
+    d3d11_cube_test->device_context->Draw(vertex_count, 0);
 
-        d3d11_cube_test->device_context->Draw(vertex_count, 0);
-    }
+    ID3D11ShaderResourceView* null_shader_resources[] = {NULL, NULL, NULL};
+    d3d11_cube_test->device_context->PSSetShaderResources(0, gj_ArrayCount(null_shader_resources), null_shader_resources);
 }
 
 static void
-d3d11_render(HWND wnd, D3D11CubeTest* d3d11_cube_test)
+d3d11_setup_render_pass(HWND wnd, D3D11CubeTest* d3d11_cube_test)
 {
     uint32_t width, height;
     get_wnd_dimensions(wnd, &width, &height);
@@ -470,6 +508,45 @@ d3d11_render(HWND wnd, D3D11CubeTest* d3d11_cube_test)
     d3d11_viewport.MaxDepth = 1.0f;
         
     d3d11_cube_test->device_context->RSSetViewports(1, &d3d11_viewport);
+}
+
+static void
+d3d11_render_scene(D3D11CubeTest* d3d11_cube_test, ID3D11ShaderResourceView* shadow_map_texture_view)
+{
+    // Spheres
+    {
+        M4x4 identity_matrix = M4x4_identity();
+        d3d11_render_mesh(d3d11_cube_test,
+                          identity_matrix,
+                          d3d11_cube_test->sphere_mesh.vertex_buffer, d3d11_cube_test->sphere_mesh.vertex_count,
+                          d3d11_cube_test->sphere_mesh.color_texture_view, d3d11_cube_test->sphere_mesh.normal_texture_view, shadow_map_texture_view);
+        M4x4 light_pos_matrix = M4x4_translation_matrix(d3d11_cube_test->light_pos);
+        d3d11_render_mesh(d3d11_cube_test,
+                          light_pos_matrix,
+                          d3d11_cube_test->sphere_mesh.vertex_buffer, d3d11_cube_test->sphere_mesh.vertex_count,
+                          d3d11_cube_test->sphere_mesh.color_texture_view, d3d11_cube_test->sphere_mesh.normal_texture_view, shadow_map_texture_view);
+        M4x4 extra_pos_matrix = M4x4_translation_matrix({10.0f, 1.0f, 5.0f});
+        d3d11_render_mesh(d3d11_cube_test,
+                          extra_pos_matrix,
+                          d3d11_cube_test->sphere_mesh.vertex_buffer, d3d11_cube_test->sphere_mesh.vertex_count,
+                          d3d11_cube_test->sphere_mesh.color_texture_view, d3d11_cube_test->sphere_mesh.normal_texture_view, shadow_map_texture_view);
+    }
+
+    // Plane
+    {
+        M4x4 identity_matrix = M4x4_identity();
+        d3d11_render_mesh(d3d11_cube_test,
+                          identity_matrix,
+                          d3d11_cube_test->plane_mesh.vertex_buffer, d3d11_cube_test->plane_mesh.vertex_count,
+                          d3d11_cube_test->plane_mesh.color_texture_view, d3d11_cube_test->plane_mesh.normal_texture_view, shadow_map_texture_view);
+    }
+}
+
+static void
+d3d11_render(HWND wnd, D3D11CubeTest* d3d11_cube_test)
+{
+    d3d11_setup_render_pass(wnd, d3d11_cube_test);
+    
     float clear_color[] = {0.0f, 0.0f, 0.0f, 1.0f};
     d3d11_cube_test->device_context->ClearRenderTargetView(d3d11_cube_test->render_target_view, clear_color);
     d3d11_cube_test->device_context->ClearDepthStencilView(d3d11_cube_test->depth_buffer_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0.0f);
@@ -484,32 +561,14 @@ d3d11_render(HWND wnd, D3D11CubeTest* d3d11_cube_test)
         d3d11_cube_test->device_context->RSSetState(d3d11_cube_test->rasterizer_state);
     }
 
-    // Spheres
-    {
-        M4x4 identity_matrix = M4x4_identity();
-        d3d11_render_mesh(d3d11_cube_test,
-                          identity_matrix,
-                          d3d11_cube_test->sphere_mesh.vertex_buffer, d3d11_cube_test->sphere_mesh.vertex_count,
-                          d3d11_cube_test->sphere_mesh.color_texture_view, d3d11_cube_test->sphere_mesh.normal_texture_view);
-        M4x4 light_pos_matrix = M4x4_translation_matrix(d3d11_cube_test->light_pos);
-        d3d11_render_mesh(d3d11_cube_test,
-                          light_pos_matrix,
-                          d3d11_cube_test->sphere_mesh.vertex_buffer, d3d11_cube_test->sphere_mesh.vertex_count,
-                          d3d11_cube_test->sphere_mesh.color_texture_view, d3d11_cube_test->sphere_mesh.normal_texture_view);
-        M4x4 extra_pos_matrix = M4x4_translation_matrix({10.0f, 1.0f, 5.0f});
-        d3d11_render_mesh(d3d11_cube_test,
-                          extra_pos_matrix,
-                          d3d11_cube_test->sphere_mesh.vertex_buffer, d3d11_cube_test->sphere_mesh.vertex_count,
-                          d3d11_cube_test->sphere_mesh.color_texture_view, d3d11_cube_test->sphere_mesh.normal_texture_view);
-    }
+    memcpy(d3d11_cube_test->projection_matrix.a, d3d11_cube_test->world_projection_matrix.a, sizeof(M4x4));
+    memcpy(d3d11_cube_test->model_view_matrix.a, d3d11_cube_test->world_model_view_matrix.a, sizeof(M4x4));
 
-    // Plane
     {
-        M4x4 identity_matrix = M4x4_identity();
-        d3d11_render_mesh(d3d11_cube_test,
-                          identity_matrix,
-                          d3d11_cube_test->plane_mesh.vertex_buffer, d3d11_cube_test->plane_mesh.vertex_count,
-                          d3d11_cube_test->plane_mesh.color_texture_view, d3d11_cube_test->plane_mesh.normal_texture_view);
+        d3d11_cube_test->device_context->VSSetShader(d3d11_cube_test->vertex_shader, NULL, 0);
+        d3d11_cube_test->device_context->PSSetShader(d3d11_cube_test->pixel_shader, NULL, 0);
+        
+        d3d11_render_scene(d3d11_cube_test, NULL);
     }
     
     // Skybox
@@ -545,6 +604,32 @@ d3d11_render(HWND wnd, D3D11CubeTest* d3d11_cube_test)
 #endif
     
     d3d11_cube_test->swap_chain->Present(1, 0);
+}
+
+static void
+d3d11_render_shadow_map(HWND wnd, D3D11CubeTest* d3d11_cube_test)
+{
+    d3d11_setup_render_pass(wnd, d3d11_cube_test);
+    
+    d3d11_cube_test->device_context->ClearDepthStencilView(d3d11_cube_test->shadow_map_render_target_view, D3D11_CLEAR_DEPTH | D3D11_CLEAR_STENCIL, 1.0f, 0.0f);
+    d3d11_cube_test->device_context->OMSetRenderTargets(0, NULL, d3d11_cube_test->shadow_map_render_target_view);
+    d3d11_cube_test->device_context->OMSetDepthStencilState(d3d11_cube_test->depth_stencil_state, 0);
+    d3d11_cube_test->device_context->RSSetState(d3d11_cube_test->rasterizer_state);
+
+    memcpy(d3d11_cube_test->projection_matrix.a, d3d11_cube_test->light_projection_matrix.a, sizeof(M4x4));
+    memcpy(d3d11_cube_test->model_view_matrix.a, d3d11_cube_test->light_model_view_matrix.a, sizeof(M4x4));
+    
+     {
+        d3d11_cube_test->device_context->VSSetShader(d3d11_cube_test->shadow_map_vertex_shader, NULL, 0);
+        d3d11_cube_test->device_context->PSSetShader(d3d11_cube_test->shadow_map_pixel_shader, NULL, 0);
+
+        d3d11_render_scene(d3d11_cube_test, d3d11_cube_test->shadow_map_texture_view);
+    }
+
+    {
+        ID3D11RenderTargetView* null_view0[] = {NULL};
+        d3d11_cube_test->device_context->OMSetRenderTargets(1, null_view0, NULL);
+    }
 }
 
 static void
@@ -685,15 +770,20 @@ main_thread_proc(LPVOID _param)
             V3f up_movement = V3_mul(move_delta_y, {0.0f, 1.0f, 0.0f});
             d3d11_cube_test.camera_pos = V3_add(d3d11_cube_test.camera_pos, V3_add(forward_movement, V3_add(left_movement, up_movement)));
         
-            d3d11_cube_test.model_view_matrix = M4x4_model_view_matrix(
+            d3d11_cube_test.world_model_view_matrix = M4x4_model_view_matrix(
                 d3d11_cube_test.camera_pos,
                 fps_forward,
+                {0.0f, 1.0f, 0.0f});
+
+            d3d11_cube_test.light_model_view_matrix = M4x4_model_view_matrix(
+                d3d11_cube_test.light_pos,
+                V3_neg(d3d11_cube_test.light_pos),
                 {0.0f, 1.0f, 0.0f});
             
             // Mouse raycast
             {
-                M4x4 inverse_projection_matrix = M4x4_inverse_projection_matrix(d3d11_cube_test.projection_matrix);
-                M4x4 inverse_model_view_matrix = M4x4_inverse_model_view_matrix(d3d11_cube_test.model_view_matrix, d3d11_cube_test.camera_pos);
+                M4x4 inverse_projection_matrix = M4x4_inverse_projection_matrix(d3d11_cube_test.world_projection_matrix);
+                M4x4 inverse_model_view_matrix = M4x4_inverse_model_view_matrix(d3d11_cube_test.world_model_view_matrix, d3d11_cube_test.camera_pos);
                 
                 V2f mouse_ndc;
                 mouse_ndc.x = (2.0f * d3d11_cube_test.mouse_pos.x) / d3d11_cube_test.width - 1.0f;
@@ -727,7 +817,8 @@ main_thread_proc(LPVOID _param)
 
         ImGui::Render();
 #endif
-        
+
+        d3d11_render_shadow_map(wnd, &d3d11_cube_test);
         d3d11_render(wnd, &d3d11_cube_test);
     }
     

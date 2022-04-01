@@ -2,10 +2,14 @@
 setlocal
 set vs_bytes=vs_bytes
 set ps_bytes=ps_bytes
+set shadow_map_vs_bytes=shadow_map_vs_bytes
+set shadow_map_ps_bytes=shadow_map_ps_bytes
 set skybox_vs_bytes=skybox_vs_bytes
 set skybox_ps_bytes=skybox_ps_bytes
 fxc /nologo /Zi /Od /T vs_5_0 /E VSMain /Fh code/vs.h /Vn %vs_bytes% data/shaders/shader.hlsl
 fxc /nologo /Zi /Od /T ps_5_0 /E PSMain /Fh code/ps.h /Vn %ps_bytes% data/shaders/shader.hlsl
+fxc /nologo /Zi /Od /T vs_5_0 /E VSShadowMapMain /Fh code/shadow_map_vs.h /Vn %shadow_map_vs_bytes% data/shaders/shader.hlsl
+fxc /nologo /Zi /Od /T ps_5_0 /E PSShadowMapMain /Fh code/shadow_map_ps.h /Vn %shadow_map_ps_bytes% data/shaders/shader.hlsl
 fxc /nologo /Zi /Od /T vs_5_0 /E VSSkyboxMain /Fh code/skybox_vs.h /Vn %skybox_vs_bytes% data/shaders/shader.hlsl
 fxc /nologo /Zi /Od /T ps_5_0 /E PSSkyboxMain /Fh code/skybox_ps.h /Vn %skybox_ps_bytes% data/shaders/shader.hlsl 
 mkdir build
@@ -15,6 +19,8 @@ cl /DCUBE_TEST_DEBUG^
    /DUSE_IMGUI^
    /DVS_BYTES=%vs_bytes%^
    /DPS_BYTES=%ps_bytes%^
+   /DVSShadowMap_BYTES=%shadow_map_vs_bytes%^
+   /DPSShadowMap_BYTES=%shadow_map_ps_bytes%^
    /DVSSkybox_BYTES=%skybox_vs_bytes%^
    /DPSSkybox_BYTES=%skybox_ps_bytes%^
    /I..\gj^

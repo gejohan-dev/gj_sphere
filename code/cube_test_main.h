@@ -41,7 +41,17 @@ struct D3D11CubeTest
     ID3D11Buffer*             constant_buffer;
     M4x4                      projection_matrix;
     M4x4                      model_view_matrix;
+    M4x4                      world_projection_matrix;
+    M4x4                      world_model_view_matrix;
+    M4x4                      light_projection_matrix;
+    M4x4                      light_model_view_matrix;
 
+    ID3D11Texture2D*          shadow_map_render_target;
+    ID3D11DepthStencilView*   shadow_map_render_target_view;
+    ID3D11ShaderResourceView* shadow_map_texture_view;
+    ID3D11VertexShader*       shadow_map_vertex_shader;
+    ID3D11PixelShader*        shadow_map_pixel_shader;
+    
     D3D11Mesh sphere_mesh;
     D3D11Mesh plane_mesh;
         

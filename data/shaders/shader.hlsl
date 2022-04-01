@@ -51,6 +51,7 @@ PS_Input VSMain(VS_INPUT input)
 
 Texture2D SphereColorTexture  : register(t0);
 Texture2D SphereNormalTexture : register(t1);
+Texture2D ShadowMapTexture    : register(t2);
 
 float4 PSMain(PS_Input input) : SV_TARGET
 {
@@ -81,6 +82,22 @@ float4 PSMain(PS_Input input) : SV_TARGET
                    
     // Sample
     return SphereColorTexture.Sample(Sampler, input.UV) * float4(Light, 1.0f);
+}
+
+////////////////////////////////////////
+// Shadow Map Shader
+////////////////////////////////////////
+float4 VSShadowMapMain(VS_INPUT input) : SV_POSITION
+{
+    PS_Input Out;
+    float4x4 MVP = mul(MeshTransform, mul(MV, mul(ToHLSLCoords, Proj)));
+    float4 _Pos = float4(input.Pos, 1.0f);
+    return mul(_Pos, MVP);
+}
+
+float4 PSShadowMapMain(float4 Pos : SV_POSITION) : SV_Target
+{
+    return float4(1.0f, 1.0f, 1.0f, 1.0f);
 }
 
 ////////////////////////////////////////
