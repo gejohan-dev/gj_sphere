@@ -6,7 +6,7 @@ cbuffer cb : register(b0)
     float4x4 MeshTransform;
     float3   LightPos;
     float3   CameraPos;
-    bool4    Flag;
+//    bool4    Flag;
 };
 
 SamplerState Sampler : register(s0);
@@ -54,9 +54,10 @@ Texture2D SphereNormalTexture : register(t1);
 
 float4 PSMain(PS_Input input) : SV_TARGET
 {
-    float3 Normal;
-    if (Flag.x) Normal = normalize(SphereNormalTexture.Sample(Sampler, input.UV).xyz);
-    else        Normal = normalize(input.Normal);
+//    float3 Normal;
+//    if (Flag.x) Normal = normalize(SphereNormalTexture.Sample(Sampler, input.UV).xyz);
+//    else        Normal = normalize(input.Normal);
+    float3 Normal = normalize(input.Normal);
     
     // Light
     float3 LightColor = float3(1.0f, 1.0f, 1.0f);
@@ -64,7 +65,7 @@ float4 PSMain(PS_Input input) : SV_TARGET
     float3 LightDirection = normalize(LightPos - input.VertexPos);
     float3 ViewDirection  = normalize(CameraPos - input.VertexPos);
 
-    float  Ambient      = 0.1f;
+    float  Ambient      = 0.5f;
     float3 AmbientLight = LightColor;
 
     float  Diffuse      = max(dot(Normal, LightDirection), 0.0f);

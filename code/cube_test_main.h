@@ -1,6 +1,16 @@
 #if !defined(CUBE_TEST_MAIN_H)
 #define CUBE_TEST_MAIN_H
 
+struct D3D11Mesh
+{
+    ID3D11Buffer*             vertex_buffer;
+    uint32_t                  vertex_count;
+    ID3D11Texture2D*          color_texture;
+    ID3D11ShaderResourceView* color_texture_view;
+    ID3D11Texture2D*          normal_texture;
+    ID3D11ShaderResourceView* normal_texture_view;
+};
+
 struct D3D11CubeTest
 {
     uint32_t width;
@@ -20,10 +30,6 @@ struct D3D11CubeTest
     ID3D11PixelShader*        pixel_shader;
     ID3D11InputLayout*        input_layout;
     ID3D11SamplerState*       sampler_state;
-    ID3D11Texture2D*          color_texture;
-    ID3D11ShaderResourceView* color_texture_view;
-    ID3D11Texture2D*          normal_texture;
-    ID3D11ShaderResourceView* normal_texture_view;
     ID3D11VertexShader*       skybox_vertex_shader;
     ID3D11PixelShader*        skybox_pixel_shader;
     ID3D11Texture2D*          skybox_texture;
@@ -35,14 +41,17 @@ struct D3D11CubeTest
     ID3D11Buffer*             constant_buffer;
     M4x4                      projection_matrix;
     M4x4                      model_view_matrix;
-    
-    ID3D11Buffer* sphere_vertex_buffer;
-    uint32_t      sphere_vertex_count;
 
+    D3D11Mesh sphere_mesh;
+    D3D11Mesh plane_mesh;
+        
     float yaw;
     float pitch;
     V3f   camera_pos;
 
+    V2f mouse_pos;
+    V3f mouse_world_pos;
+    
     bool up_is_down;
     bool down_is_down;
     bool left_is_down;
