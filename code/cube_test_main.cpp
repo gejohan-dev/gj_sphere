@@ -69,6 +69,9 @@ d3d11_resize(HWND wnd, D3D11CubeTest* d3d11_cube_test, uint32_t width, uint32_t 
     d3d11_cube_test->device->CreateDepthStencilView(d3d11_cube_test->depth_buffer, NULL, &d3d11_cube_test->depth_buffer_view);
     backbuffer->Release();
 
+    d3d11_cube_test->width = width;
+    d3d11_cube_test->height = height;
+    
     d3d11_cube_test->projection_matrix = M4x4_projection_matrix(70.0f, (float)width/(float)height, 0.01f, 100.0f);
 }
 
@@ -264,8 +267,8 @@ d3d11_init(HWND wnd, D3D11CubeTest* d3d11_cube_test)
         g_platform_api.deallocate_memory(uvs);
         g_platform_api.deallocate_memory(uv_indices);
 
-        d3d11_load_texture(d3d11_cube_test->device, "textures/rock_color.png",  &d3d11_cube_test->color_texture, &d3d11_cube_test->color_texture_view);
-        d3d11_load_texture(d3d11_cube_test->device, "textures/rock_normal.png", &d3d11_cube_test->normal_texture, &d3d11_cube_test->normal_texture_view);
+        d3d11_load_texture(d3d11_cube_test->device, "textures/snow_color.png",  &d3d11_cube_test->color_texture, &d3d11_cube_test->color_texture_view);
+        d3d11_load_texture(d3d11_cube_test->device, "textures/snow_normal.png", &d3d11_cube_test->normal_texture, &d3d11_cube_test->normal_texture_view);
     }
     
     // Skybox
