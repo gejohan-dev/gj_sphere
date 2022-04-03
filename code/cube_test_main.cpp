@@ -102,10 +102,12 @@ d3d11_resize(HWND wnd, D3D11CubeTest* d3d11_cube_test, uint32_t width, uint32_t 
     
     d3d11_cube_test->width = width;
     d3d11_cube_test->height = height;
-    
-    d3d11_cube_test->world_projection_matrix = M4x4_projection_matrix(70.0f, (float)width/(float)height, 0.01f, 100.0f);
-    d3d11_cube_test->light_projection_matrix = M4x4_projection_matrix(70.0f, (float)width/(float)height, 0.01f, 100.0f);
-    // d3d11_cube_test->light_projection_matrix = M4x4_orthographic_matrix((float)width, (float)height, 0.01f, 100.0f);
+
+    f32 aspect_w_over_h = (float)width/(float)height;
+    d3d11_cube_test->world_projection_matrix = M4x4_projection_matrix(70.0f, aspect_w_over_h, 0.01f, 100.0f);
+    // d3d11_cube_test->light_projection_matrix = M4x4_projection_matrix(70.0f, (float)width/(float)height, 0.01f, 100.0f);
+    // d3d11_cube_test->light_projection_matrix = M4x4_orthographic_matrix(-20.0f, 20.0f, 20.0f, -20.0f, 1.0f, 50.0f);
+    d3d11_cube_test->light_projection_matrix = M4x4_orthographic_matrix(aspect_w_over_h, 1.0f, 50.0f);
 }
 
 static ID3D11Buffer*
@@ -113,10 +115,10 @@ d3d11_create_vertex_buffer(ID3D11Device* device, void* data, size_t data_size, s
 {
     ID3D11Buffer* result;
     D3D11_BUFFER_DESC buffer_desc; gj_ZeroStruct(&buffer_desc);
-    buffer_desc.ByteWidth = data_size;
-    buffer_desc.Usage = D3D11_USAGE_DYNAMIC;
-    buffer_desc.BindFlags = D3D11_BIND_VERTEX_BUFFER;
-    buffer_desc.CPUAccessFlags = D3D11_CPU_ACCESS_WRITE;
+    buffer_desc.ByteWidth           = data_size;
+    buffer_desc.Usage               = D3D11_USAGE_DYNAMIC;
+    buffer_desc.BindFlags           = D3D11_BIND_VERTEX_BUFFER;
+    buffer_desc.CPUAccessFlags      = D3D11_CPU_ACCESS_WRITE;
     buffer_desc.StructureByteStride = stride;
     D3D11_SUBRESOURCE_DATA _data; gj_ZeroStruct(&_data); _data.pSysMem = data;
     HRESULT hr = device->CreateBuffer(&buffer_desc, &_data, &result);
