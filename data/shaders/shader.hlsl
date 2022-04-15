@@ -134,3 +134,33 @@ float4 PSSkyboxMain(VSSkybox_Output input) : SV_Target
 {
     return SkyboxTexture.Sample(Sampler, input.UV);
 }
+
+////////////////////////////////////////
+// Image Shader
+////////////////////////////////////////
+Texture2D ImageTexture : register(t0);
+
+struct VSImageInput
+{
+    float2 Pos : POS;
+    float2 UV  : TEXCOORD;
+};
+
+struct PSImageInput
+{
+    float4 Pos : SV_POSITION;
+    float2 UV  : TEXCOORD;
+};
+
+PSImageInput VSImageMain(VSImageInput input)
+{
+    PSImageInput Out;
+    Out.Pos = float4(input.Pos, 0.0f, 1.0f);
+    Out.UV  = input.UV;
+    return Out;
+}
+
+float4 PSImageMain(PSImageInput input) : SV_TARGET
+{
+    return ImageTexture.Sample(Sampler, input.UV);
+}

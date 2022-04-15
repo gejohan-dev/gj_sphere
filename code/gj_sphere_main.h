@@ -1,5 +1,5 @@
-#if !defined(CUBE_TEST_MAIN_H)
-#define CUBE_TEST_MAIN_H
+#if !defined(GJ_SPHERE_MAIN_H)
+#define GJ_SPHERE_MAIN_H
 
 struct D3D11Mesh
 {
@@ -11,7 +11,7 @@ struct D3D11Mesh
     ID3D11ShaderResourceView* normal_texture_view;
 };
 
-struct D3D11CubeTest
+struct D3D11GJSphere
 {
     uint32_t width;
     uint32_t height;
@@ -51,6 +51,13 @@ struct D3D11CubeTest
     ID3D11ShaderResourceView* shadow_map_texture_view;
     ID3D11VertexShader*       shadow_map_vertex_shader;
     ID3D11PixelShader*        shadow_map_pixel_shader;
+
+#if defined(GJ_SPHERE_DEBUG)
+    ID3D11Texture2D*          debug_image_texture;
+    ID3D11ShaderResourceView* debug_image_view;
+    ID3D11VertexShader*       debug_image_vertex_shader;
+    ID3D11PixelShader*        debug_image_pixel_shader;
+#endif
     
     D3D11Mesh sphere_mesh;
     D3D11Mesh plane_mesh;
@@ -73,7 +80,13 @@ struct D3D11CubeTest
     bool wireframe_mode_on;
     bool normal_use_texture;
     
-    V3f light_pos;
+    V3f   light_pos;
+    float light_left;
+    float light_right;
+    float light_top;
+    float light_bottom;
+    float light_near;
+    float light_far;
 };
 
 struct MeshVertex
